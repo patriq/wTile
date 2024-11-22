@@ -61,3 +61,9 @@ pub fn forceSetForeground(hwnd: win32.HWND) bool {
     _ = win32.SendInput(inputs.len, &inputs, @sizeOf(win32.INPUT));
     return win32.SetForegroundWindow(hwnd) != win32.FALSE;
 }
+
+pub fn getWindowsText(hwnd: ?win32.HWND) [256:0]u16 {
+    var title: [256:0]u16 = undefined;
+    _ = win32.GetWindowTextW(hwnd, &title, @intCast(title.len));
+    return title;
+}

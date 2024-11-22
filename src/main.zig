@@ -12,6 +12,7 @@ const win32 = struct {
 
 const common = @import("common.zig");
 const Rect = @import("rect.zig").Rect;
+const PreviewWindow = @import("preview_window.zig").PreviewWindow;
 
 // Set win32.unicode_mode to true to use Unicode functions
 pub const UNICODE = true;
@@ -19,8 +20,8 @@ pub const UNICODE = true;
 // Grid
 const Grid = struct {
     // Configuration
-    rows: u16 = 5,
-    cols: u16 = 5,
+    rows: u16 = 8,
+    cols: u16 = 6,
     margins: u16 = 3,
 
     // State
@@ -61,6 +62,13 @@ const Grid = struct {
         const x = self.selected_start_col * tile_width + work_area.x;
         const y = self.selected_start_row * tile_height + work_area.y;
         return Rect{ .x = x, .y = y, .width = tile_width * self.selected_col_count, .height = tile_height * self.selected_row_count };
+    }
+
+    fn resetSelection(self: *Self) void {
+        self.selected_start_row = 0;
+        self.selected_start_col = 0;
+        self.selected_col_count = 0;
+        self.selected_row_count = 0;
     }
 
     fn handleKeys(self: *Self, key: win32.VIRTUAL_KEY, shift: bool) void {
@@ -136,16 +144,13 @@ const Grid = struct {
 };
 
 const GridWindow = struct {
-    window: win32.HWND,
-    hInstance: win32.HINSTANCE,
     grid: *Grid,
-    preview_window: *const PreviewWindow,
+    preview_window: *PreviewWindow,
 
-    // State
-    running: bool = true,
+    window: ?win32.HWND = null,
+    window_class_registration: ?u16 = null,
     shift_pressed: bool = false,
 
-    const Self = @This();
     const CLASS_NAME = win32.L("Grid");
     const BACKGROUND_COLOR = common.RGB(44, 44, 44);
     const WINDOW_STYLE = win32.WS_OVERLAPPEDWINDOW;
@@ -172,9 +177,8 @@ const GridWindow = struct {
                 const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
                 switch (key) {
                     win32.VK_ESCAPE => {
-                        // Send destroy
-                        self.destroyWindow();
-                        self.preview_window.destroyWindow();
+                        // Send WM_CLOSE to the window
+                        _ = win32.PostMessage(window, win32.WM_CLOSE, 0, 0);
                         return win32.FALSE;
                     },
                     win32.VK_SHIFT => {
@@ -190,7 +194,7 @@ const GridWindow = struct {
 
                         // Change preview window position
                         const preview_area = self.grid.currentPreviewArea();
-                        self.preview_window.setPos(preview_area, self);
+                        self.preview_window.setPos(preview_area, self.window);
                         return win32.FALSE;
                     },
                     else => {
@@ -214,37 +218,42 @@ const GridWindow = struct {
                 self.render(window);
                 return win32.FALSE;
             },
-            win32.WM_DESTROY => {
-                // Destroy the window
-                // const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
-                std.debug.print("Destroying all window\n", .{});
-                return win32.FALSE;
+            win32.WM_CLOSE => {
+                const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
+                // Reset grid
+                self.grid.resetSelection();
+                // Close the preview window
+                _ = win32.PostMessage(self.preview_window.window, win32.WM_CLOSE, 0, 0);
             },
             else => {},
         }
         return win32.DefWindowProcW(window, message, wParam, lParam);
     }
 
-    fn createWindow(hInstance: win32.HINSTANCE, grid: *Grid, preview_window: *const PreviewWindow) GridWindow {
-        // Create the window class and register it
-        const wc = win32.WNDCLASSW{
-            .style = win32.WNDCLASS_STYLES{},
-            .lpfnWndProc = wndProc,
-            .cbClsExtra = 0,
-            .cbWndExtra = @sizeOf(*Self), // Reserve the size to store a Self pointer in the window
+    fn createWindow(self: *GridWindow, hInstance: win32.HINSTANCE) void {
+        // Create the window class and register it once
+        if (self.window_class_registration == null) {
+            const window_class = win32.WNDCLASSW{
+                .style = win32.WNDCLASS_STYLES{},
+                .lpfnWndProc = wndProc,
+                .cbClsExtra = 0,
+                .cbWndExtra = @sizeOf(*GridWindow), // Reserve the size to store a Self pointer in the window
             .hInstance = hInstance,
-            .hIcon = null,
-            .hCursor = win32.LoadCursorW(null, win32.IDC_ARROW),
-            .hbrBackground = win32.CreateSolidBrush(BACKGROUND_COLOR),
-            .lpszMenuName = null,
-            .lpszClassName = CLASS_NAME,
-        };
-        if (win32.RegisterClassW(&wc) == win32.FALSE) {
-            unreachable;
+                .hIcon = null,
+                .hCursor = win32.LoadCursorW(null, win32.IDC_ARROW),
+                .hbrBackground = win32.CreateSolidBrush(BACKGROUND_COLOR),
+                .lpszMenuName = null,
+                .lpszClassName = CLASS_NAME,
+            };
+            const atom = win32.RegisterClassW(&window_class);
+            if (atom == win32.FALSE) {
+                unreachable;
+            }
+            self.window_class_registration = atom;
         }
 
         // Find the client dimensions
-        const client_dimensions = grid.dimensions();
+        const client_dimensions = self.grid.dimensions();
 
         // Find the window rectangle based on the client dimensions
         var window_rect = win32.RECT{
@@ -276,29 +285,47 @@ const GridWindow = struct {
             hInstance,
             null, // WM_CREATE lpParam
         ).?;
-        return GridWindow{ .window = window, .hInstance = hInstance, .grid = grid, .preview_window = preview_window };
+
+        // Store the Self pointer in the window at offset 0
+        _ = win32.setWindowLongPtrW(window, 0, @intFromPtr(self));
+
+        self.window = window;
     }
 
-    fn showWindow(self: *const Self) void {
+    fn showWindow(self: *const GridWindow) void {
         _ = win32.ShowWindow(self.window, win32.SW_SHOW);
     }
 
-    fn forceSetForeground(self: *const Self) bool {
+    fn forceSetForeground(self: *const GridWindow) bool {
         return common.forceSetForeground(self.window);
     }
 
-    fn setForeground(self: *const Self) bool {
+    fn setForeground(self: *const GridWindow) bool {
         return win32.SetForegroundWindow(self.window) != win32.FALSE;
     }
 
-    fn destroyWindow(self: *const Self) void {
-        if (win32.IsWindow(self.window) != win32.FALSE) {
-            _ = win32.DestroyWindow(self.window);
+    fn destroyWindow(self: *GridWindow) void {
+        if (self.window) |window| {
+            _ = win32.DestroyWindow(window);
+            self.window = null;
         }
-        _ = win32.UnregisterClassW(CLASS_NAME, self.hInstance);
     }
 
-    fn render(self: *const Self, window: win32.HWND) void {
+    fn deregisterWindowClass(self: *GridWindow) void {
+        std.debug.print("Cleaning up grid window", .{});
+        // Unregister the window class
+        if (self.window_class_registration != null) {
+            _ = win32.UnregisterClassW(CLASS_NAME, null);
+            self.window_class_registration = null;
+        }
+    }
+
+    fn cleanup(self: *GridWindow) void {
+        self.destroyWindow();
+        self.deregisterWindowClass();
+    }
+
+    fn render(self: *const GridWindow, window: win32.HWND) void {
         var paint: win32.PAINTSTRUCT = undefined;
         const hdc = win32.BeginPaint(window, &paint);
         defer _ = win32.EndPaint(window, &paint);
@@ -320,79 +347,29 @@ const GridWindow = struct {
     }
 };
 
-const PreviewWindow = struct {
-    window: win32.HWND,
-    hInstance: win32.HINSTANCE,
+fn handle_hotkey(hInstance: win32.HINSTANCE, grid_window: *GridWindow, preview_window: *PreviewWindow) void {
+    // Set the preview window and grid window
+    preview_window.createWindow(hInstance);
+    grid_window.createWindow(hInstance);
 
-    const Self = @This();
-    const CLASS_NAME = win32.L("Grid Preview");
-    const BACKGROUND_COLOR = common.RGB(0, 77, 128);
+    // Get the current foreground window
+    const foreground_window = win32.GetForegroundWindow();
+    // Get its title and set it to the grid window
+    var title = common.getWindowsText(foreground_window);
+    _ = win32.SetWindowTextW(grid_window.window, &title);
 
-    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(WINAPI) win32.LRESULT {
-        return win32.DefWindowProcW(window, message, wParam, lParam);
+    // Show the window and set foreground
+    grid_window.showWindow();
+    if (!grid_window.setForeground()) {
+        std.debug.print("Couldnt set foreground window\n", .{});
     }
-
-    fn createWindow(hInstance: win32.HINSTANCE) Self {
-        // Create the window class and register it
-        const wc = win32.WNDCLASSW{
-            .style = win32.WNDCLASS_STYLES{},
-            .lpfnWndProc = wndProc,
-            .cbClsExtra = 0,
-            .cbWndExtra = 0,
-            .hInstance = hInstance,
-            .hIcon = null,
-            .hCursor = null,
-            .hbrBackground = win32.CreateSolidBrush(BACKGROUND_COLOR),
-            .lpszMenuName = null,
-            .lpszClassName = CLASS_NAME,
-        };
-        if (win32.RegisterClassW(&wc) == win32.FALSE) {
-            unreachable;
-        }
-
-        // Create the window
-        const window = win32.CreateWindowExW(
-            win32.WINDOW_EX_STYLE{ .LAYERED = 1, .TRANSPARENT = 1, .TOPMOST = 1, .NOACTIVATE = 1 },
-            CLASS_NAME, // Class name
-            null, // Window name
-            win32.WINDOW_STYLE{ .POPUP = 1, .VISIBLE = 1, .SYSMENU = 1 },
-            0,
-            0,
-            0,
-            0,
-            null, // Parent
-            null, // Menu
-            hInstance,
-            null, // WM_CREATE lpParam
-        ).?;
-
-        // Set layed window attributes
-        if (win32.SetLayeredWindowAttributes(window, 0, 107, win32.LWA_ALPHA) == win32.FALSE) {
-            unreachable;
-        }
-        return PreviewWindow{ .window = window, .hInstance = hInstance };
-    }
-
-    fn setPos(self: *const Self, rect: Rect, grid_window: *const GridWindow) void {
-        _ = win32.SetWindowPos(self.window, grid_window.window, rect.x, rect.y, rect.width, rect.height, win32.SWP_NOACTIVATE);
-    }
-
-    fn destroyWindow(self: *const Self) void {
-        if (win32.IsWindow(self.window) != win32.FALSE) {
-            _ = win32.DestroyWindow(self.window);
-        }
-        _ = win32.UnregisterClassW(CLASS_NAME, self.hInstance);
-    }
-};
+}
 
 pub export fn main(hInstance: win32.HINSTANCE, hPrevInstance: ?win32.HINSTANCE, pCmdLine: [*:0]u16, nCmdShow: u32) callconv(WINAPI) c_int {
     // Unused parameters
     _ = hPrevInstance;
     _ = pCmdLine;
     _ = nCmdShow;
-
-    // Create the grid
-    var grid = Grid{};
 
     // Register hotkey
     if (win32.RegisterHotKey(null, 1, win32.HOT_KEY_MODIFIERS{ .ALT = 1, .CONTROL = 1 }, @intFromEnum(win32.VK_RETURN)) == win32.FALSE) {
@@ -401,41 +378,23 @@ pub export fn main(hInstance: win32.HINSTANCE, hPrevInstance: ?win32.HINSTANCE, 
     }
     defer _ = win32.UnregisterHotKey(null, 1);
 
-    // Allocate the preview window in the stack and defer its destruction on program exit
-    var preview_window: PreviewWindow = undefined;
-    defer preview_window.destroyWindow();
+    // Create the grid
+    var grid = Grid{};
 
-    // Allocate the grid window in the stack and defer its destruction on program exit
-    var grid_window: GridWindow = undefined;
-    defer grid_window.destroyWindow();
+    // Allocate the preview window in the stack and defer its cleanup on program exit
+    var preview_window = PreviewWindow{};
+    defer preview_window.cleanup();
+
+    // Allocate the grid window in the stack and defer its cleanup on program exit
+    var grid_window = GridWindow{.grid = &grid, .preview_window = &preview_window};
+    defer grid_window.cleanup();
 
     // Standard message loop for all messages in this process
     var message: win32.MSG = undefined;
     while (win32.GetMessageW(&message, null, 0, 0) != win32.FALSE) {
         // Handle hotkey
         if (message.message == win32.WM_HOTKEY) {
-            std.debug.print("Hotkey pressed\n", .{});
-
-            // Create the preview window
-            preview_window = PreviewWindow.createWindow(hInstance);
-
-            // Create the window grid
-            grid_window = GridWindow.createWindow(hInstance, &grid, &preview_window);
-            // Store the Self pointer in the window at offset 0
-            _ = win32.setWindowLongPtrW(grid_window.window, 0, @intFromPtr(&grid_window));
-
-            // Get the current foreground window
-            const foreground_window = win32.GetForegroundWindow();
-            // Get its title and set it to the grid window
-            var title: [256:0]u16 = undefined;
-            _ = win32.GetWindowTextW(foreground_window, &title, @intCast(title.len));
-            _ = win32.SetWindowTextW(grid_window.window, &title);
-
-            // Show the window and set foreground
-            grid_window.showWindow();
-            if (!grid_window.setForeground()) {
-                std.debug.print("Couldnt set foreground window\n", .{});
-            }
+            handle_hotkey(hInstance, &grid_window, &preview_window);
             continue;
         }
 
