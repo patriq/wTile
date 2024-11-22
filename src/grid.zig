@@ -1,4 +1,5 @@
 const win32 = struct {
+    usingnamespace @import("win32").foundation;
     usingnamespace @import("win32").ui.input.keyboard_and_mouse;
 };
 
@@ -50,6 +51,17 @@ pub const Grid = struct {
         const x = self.selected_start_col * tile_width + work_area.x;
         const y = self.selected_start_row * tile_height + work_area.y;
         return Rect{ .x = x, .y = y, .width = tile_width * self.selected_col_count, .height = tile_height * self.selected_row_count };
+    }
+
+    pub fn calculateActiveWindowArea(self: *const Self, active_window: win32.HWND) Rect {
+        // Get the preview window position for use to set the active window position to
+        var preview_area = self.currentPreviewArea();
+        // Windows has some weird borders that need to be accounted for
+        const borders = common.getTransparentBorders(active_window);
+        preview_area.x -= borders[0];
+        preview_area.width += borders[0] * 2;
+        preview_area.height += borders[1];
+        return preview_area;
     }
 
     pub fn resetSelection(self: *Self) void {

@@ -83,3 +83,22 @@ pub fn getWindowProcessText(hwnd: ?win32.HWND) [256:0]u16 {
     _ = win32.K32GetProcessImageFileNameW(process, &buffer, @intCast(buffer.len));
     return buffer;
 }
+
+pub fn getTransparentBorders(hwnd: ?win32.HWND) struct { i32, i32 } {
+    var info: win32.WINDOWINFO = undefined;
+    info.cbSize = @sizeOf(win32.WINDOWINFO);
+    _ = win32.GetWindowInfo(hwnd, &info);
+    const window_rect = Rect.fromRECT(info.rcWindow);
+    const client_rect = Rect.fromRECT(info.rcClient);
+    const x_border = window_rect.x - client_rect.x + window_rect.width - client_rect.width;
+    const y_border = window_rect.y - client_rect.y + window_rect.height - client_rect.height;
+    return .{ x_border , y_border };
+}
+
+pub fn closeWindow(hwnd: ?win32.HWND) void {
+    _ = win32.PostMessageW(hwnd, win32.WM_CLOSE, 0, 0);
+}
+
+pub fn setWindowPos(hwnd: ?win32.HWND, rect: Rect, insert_after: ?win32.HWND) void {
+    _ = win32.SetWindowPos(hwnd, insert_after, rect.x, rect.y, rect.width, rect.height, win32.SWP_NOACTIVATE);
+}

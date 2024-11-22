@@ -68,7 +68,11 @@ pub const PreviewWindow = struct {
     }
 
     pub fn setPos(self: *const PreviewWindow, rect: Rect, insert_after: ?win32.HWND) void {
-        _ = win32.SetWindowPos(self.window, insert_after, rect.x, rect.y, rect.width, rect.height, win32.SWP_NOACTIVATE);
+        common.setWindowPos(self.window, rect, insert_after);
+    }
+
+    pub fn closeWindow(self: *PreviewWindow) void {
+        common.closeWindow(self.window);
     }
 
     fn destroyWindow(self: *PreviewWindow) void {
@@ -79,7 +83,6 @@ pub const PreviewWindow = struct {
     }
 
     fn deregisterWindowClass(self: *PreviewWindow) void {
-        std.debug.print("Cleaning up preview window", .{});
         // Unregister the window class
         if (self.window_class_registration != null) {
             _ = win32.UnregisterClassW(CLASS_NAME, null);

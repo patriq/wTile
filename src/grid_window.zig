@@ -20,6 +20,7 @@ pub const GridWindow = struct {
     window: ?win32.HWND = null,
     window_class_registration: ?u16 = null,
     shift_pressed: bool = false,
+    active_window: ?win32.HWND = null,
 
     const CLASS_NAME = win32.L("Grid");
     const BACKGROUND_COLOR = common.RGB(44, 44, 44);
@@ -47,8 +48,7 @@ pub const GridWindow = struct {
                 const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
                 switch (key) {
                     win32.VK_ESCAPE => {
-                        // Send WM_CLOSE to the window
-                        _ = win32.PostMessage(window, win32.WM_CLOSE, 0, 0);
+                        self.closeWindow();
                         return win32.FALSE;
                     },
                     win32.VK_SHIFT => {
@@ -67,9 +67,11 @@ pub const GridWindow = struct {
                         self.preview_window.setPos(preview_area, self.window);
                         return win32.FALSE;
                     },
-                    else => {
-                        std.debug.print("{}", .{key});
+                    win32.VK_RETURN => {
+                        self.applyActiveWindowResize();
+                        self.closeWindow();
                     },
+                    else => {},
                 }
             },
             win32.WM_KEYUP => {
@@ -93,7 +95,7 @@ pub const GridWindow = struct {
                 // Reset grid
                 self.grid.resetSelection();
                 // Close the preview window
-                _ = win32.PostMessage(self.preview_window.window, win32.WM_CLOSE, 0, 0);
+                self.preview_window.closeWindow();
             },
             else => {},
         }
@@ -108,7 +110,7 @@ pub const GridWindow = struct {
                 .lpfnWndProc = wndProc,
                 .cbClsExtra = 0,
                 .cbWndExtra = @sizeOf(*GridWindow), // Reserve the size to store a Self pointer in the window
-            .hInstance = hInstance,
+                .hInstance = hInstance,
                 .hIcon = null,
                 .hCursor = win32.LoadCursorW(null, win32.IDC_ARROW),
                 .hbrBackground = win32.CreateSolidBrush(BACKGROUND_COLOR),
@@ -178,11 +180,31 @@ pub const GridWindow = struct {
     }
 
     pub fn onForegroundChange(self: *GridWindow, previous: ?win32.HWND, current: ?win32.HWND) void {
-        // Get its title and set it to the grid window
-        if (current != self.window and current != self.preview_window.window) {
-            var title = common.getWindowsText(current);
+        // Set the active window to the previous window if we don't have any. This means we are starting up and the
+        // previous window is the first window we have seen (that is not us).
+        if (self.active_window == null and previous != self.window and previous != self.preview_window.window) {
+            self.active_window = previous;
+        }
+        // After initializing the active window, we can change it to the current window (that is not us).
+        else if (current != self.window and current != self.preview_window.window) {
+            self.active_window = current;
+        }
+
+        // If we have an active window, update the title of the grid window to let the user know what window is active.
+        if (self.active_window != null) {
+            var title = common.getWindowsText(self.active_window);
             _ = win32.SetWindowTextW(self.window, &title);
-            std.debug.print("Changed window from {any} {any}\n", .{previous, current});
+        }
+    }
+
+    fn applyActiveWindowResize(self: *GridWindow) void {
+        if (self.active_window) |active_window| {
+            // Restore the window to fix resizing with maximized windows
+            _ = win32.ShowWindow(active_window, win32.SW_RESTORE);
+            // Get the active window area
+            const active_window_area = self.grid.calculateActiveWindowArea(active_window);
+            // Set the active window position without activating it (no loss of focus)
+            common.setWindowPos(active_window, active_window_area, null);
         }
     }
 
@@ -205,6 +227,10 @@ pub const GridWindow = struct {
     pub fn cleanup(self: *GridWindow) void {
         self.destroyWindow();
         self.deregisterWindowClass();
+    }
+
+    fn closeWindow(self: *GridWindow) void {
+        common.closeWindow(self.window);
     }
 
     fn render(self: *const GridWindow, window: win32.HWND) void {
