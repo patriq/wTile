@@ -4,6 +4,8 @@ const win32 = struct {
     usingnamespace @import("win32").graphics.gdi;
     usingnamespace @import("win32").ui.windows_and_messaging;
     usingnamespace @import("win32").ui.input.keyboard_and_mouse;
+    usingnamespace @import("win32").system.threading;
+    usingnamespace @import("win32").system.process_status;
 };
 
 const Rect = @import("rect.zig").Rect;
@@ -66,4 +68,18 @@ pub fn getWindowsText(hwnd: ?win32.HWND) [256:0]u16 {
     var title: [256:0]u16 = undefined;
     _ = win32.GetWindowTextW(hwnd, &title, @intCast(title.len));
     return title;
+}
+
+pub fn getWindowProcessText(hwnd: ?win32.HWND) [256:0]u16 {
+    var process_id: u32 = 0;
+    _ = win32.GetWindowThreadProcessId(hwnd, &process_id);
+    const process = win32.OpenProcess(win32.PROCESS_QUERY_LIMITED_INFORMATION, win32.FALSE, process_id);
+    var buffer: [256:0]u16 = undefined;
+    @memset(&buffer, 0);
+    if (process == null) {
+        return buffer;
+    }
+    defer _ = win32.CloseHandle(process);
+    _ = win32.K32GetProcessImageFileNameW(process, &buffer, @intCast(buffer.len));
+    return buffer;
 }

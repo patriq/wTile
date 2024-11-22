@@ -167,11 +167,23 @@ pub const GridWindow = struct {
     }
 
     fn forceSetForeground(self: *const GridWindow) bool {
-        return common.forceSetForeground(self.window);
+        if (self.window) |window| {
+            return common.forceSetForeground(window);
+        }
+        return false;
     }
 
     pub fn setForeground(self: *const GridWindow) bool {
         return win32.SetForegroundWindow(self.window) != win32.FALSE;
+    }
+
+    pub fn onForegroundChange(self: *GridWindow, previous: ?win32.HWND, current: ?win32.HWND) void {
+        // Get its title and set it to the grid window
+        if (current != self.window and current != self.preview_window.window) {
+            var title = common.getWindowsText(current);
+            _ = win32.SetWindowTextW(self.window, &title);
+            std.debug.print("Changed window from {any} {any}\n", .{previous, current});
+        }
     }
 
     fn destroyWindow(self: *GridWindow) void {

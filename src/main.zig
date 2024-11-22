@@ -15,6 +15,7 @@ const Rect = @import("rect.zig").Rect;
 const Grid = @import("grid.zig").Grid;
 const PreviewWindow = @import("preview_window.zig").PreviewWindow;
 const GridWindow = @import("grid_window.zig").GridWindow;
+const foreground_hook = @import("foreground_hook.zig");
 
 // Set win32.unicode_mode to true to use Unicode functions
 pub const UNICODE = true;
@@ -23,12 +24,6 @@ fn handle_hotkey(hInstance: win32.HINSTANCE, grid_window: *GridWindow, preview_w
     // Set the preview window and grid window
     preview_window.createWindow(hInstance);
     grid_window.createWindow(hInstance);
-
-    // Get the current foreground window
-    const foreground_window = win32.GetForegroundWindow();
-    // Get its title and set it to the grid window
-    var title = common.getWindowsText(foreground_window);
-    _ = win32.SetWindowTextW(grid_window.window, &title);
 
     // Show the window and set foreground
     grid_window.showWindow();
@@ -60,6 +55,11 @@ pub export fn main(hInstance: win32.HINSTANCE, hPrevInstance: ?win32.HINSTANCE, 
     // Allocate the grid window in the stack and defer its cleanup on program exit
     var grid_window = GridWindow{.grid = &grid, .preview_window = &preview_window};
     defer grid_window.cleanup();
+
+    // Register a hook to keep track of the foreground window
+    const ForegroundGridWindowHook = foreground_hook.ForegroundHook(*GridWindow);
+    var foreground_grid_window_hook = ForegroundGridWindowHook.hook(&grid_window, GridWindow.onForegroundChange);
+    defer foreground_grid_window_hook.unhook();
 
     // Standard message loop for all messages in this process
     var message: win32.MSG = undefined;
