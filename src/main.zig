@@ -15,14 +15,15 @@ const Rect = @import("rect.zig").Rect;
 const Grid = @import("grid.zig").Grid;
 const PreviewWindow = @import("preview_window.zig").PreviewWindow;
 const GridWindow = @import("grid_window.zig").GridWindow;
+const Tray = @import("tray.zig").Tray;
 const foreground_hook = @import("foreground_hook.zig");
 
 // Set win32.unicode_mode to true to use Unicode functions
 pub const UNICODE = true;
 
 fn handle_hotkey(hInstance: win32.HINSTANCE, grid_window: *GridWindow, preview_window: *PreviewWindow) void {
+    // If the grid window is already visible, repostion it
     if (grid_window.window != null) {
-        // If the grid window is already visible, repostion it
         grid_window.reposition();
         return;
     }
@@ -50,6 +51,11 @@ pub export fn main(hInstance: win32.HINSTANCE, hPrevInstance: ?win32.HINSTANCE, 
         unreachable;
     }
     defer _ = win32.UnregisterHotKey(null, 1);
+
+    // Spawn tray icon
+    var tray = Tray{};
+    tray.create(hInstance);
+    defer tray.cleanup();
 
     // Create the grid
     var grid = Grid{};

@@ -27,6 +27,9 @@ pub fn build(b: *std.Build) void {
     });
     exe.subsystem = .Console;
 
+    // Icon
+    exe.root_module.addAnonymousImport("res/icon.png", .{ .root_source_file = b.path("res/icon.png") });
+
     // Add dependencies to the executable.
     exe.root_module.addImport("win32", b.dependency("zigwin32", .{}).module("zigwin32"));
 
