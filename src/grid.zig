@@ -13,25 +13,26 @@ pub const Grid = struct {
     cols: u16 = 6,
     margins: u16 = 3,
 
+    // "Constants"
+    tile_width: i32 = 40,
+    tile_height: i32 = @divTrunc(6 * 40, 8),
+
     // State
     selected_start_row: i32 = 0,
     selected_start_col: i32 = 0,
     selected_col_count: i32 = 0,
     selected_row_count: i32 = 0,
 
-    const TILE_WIDTH = 40;
-    const TILE_HEIGHT = 34;
-
     pub fn dimensions(self: *const Grid) struct { i32, i32 } {
-        const width = TILE_WIDTH * self.cols + self.margins * (self.cols + 1);
-        const height = TILE_HEIGHT * self.rows + self.margins * (self.rows + 1);
+        const width = self.tile_width * self.cols + self.margins * (self.cols + 1);
+        const height = self.tile_height * self.rows + self.margins * (self.rows + 1);
         return .{ @intCast(width), @intCast(height) };
     }
 
     pub fn tileArea(self: *const Grid, row: i32, column: i32) Rect {
-        const x = column * Grid.TILE_WIDTH + self.margins * (column + 1);
-        const y = row * Grid.TILE_HEIGHT + self.margins * (row + 1);
-        return Rect{ .x = x, .y = y, .width = Grid.TILE_WIDTH, .height = Grid.TILE_HEIGHT };
+        const x = column * self.tile_width + self.margins * (column + 1);
+        const y = row * self.tile_height + self.margins * (row + 1);
+        return Rect{ .x = x, .y = y, .width = self.tile_width, .height = self.tile_height };
     }
 
     pub fn isSelected(self: *const Grid, row: i32, col: i32) bool {
@@ -46,8 +47,8 @@ pub const Grid = struct {
     pub fn setSelectedUsingActiveWindow(self: *Grid, active_window: win32.HWND) void {
         const active_window_rect = common.getWindowsPos(active_window);
         const work_area = common.getWorkArea();
-        const tile_width = @divTrunc(work_area.width, self.cols);
-        const tile_height = @divTrunc(work_area.height, self.rows);
+        const preview_tile_width = @divTrunc(work_area.width, self.cols);
+        const preview_tile_height = @divTrunc(work_area.height, self.rows);
 
         // Find the first tile and the last tile that the active window overlaps with
         var start_col: i32 = -1;
@@ -60,9 +61,9 @@ pub const Grid = struct {
         while (row < self.rows) : (row += 1) {
             var col: i32 = 0;
             while (col < self.cols) : (col += 1) {
-                const x = col * tile_width + work_area.x;
-                const y = row * tile_height + work_area.y;
-                const preview_tile_area = Rect{.x = x, .y = y, .width = tile_width, .height = tile_height};
+                const x = col * preview_tile_width + work_area.x;
+                const y = row * preview_tile_height + work_area.y;
+                const preview_tile_area = Rect{ .x = x, .y = y, .width = preview_tile_width, .height = preview_tile_height };
                 if (active_window_rect.overlaps(preview_tile_area)) {
                     if (start_col == -1) {
                         start_col = col;
@@ -99,11 +100,11 @@ pub const Grid = struct {
 
     pub fn currentPreviewArea(self: *const Grid) Rect {
         const work_area = common.getWorkArea();
-        const tile_width = @divTrunc(work_area.width, self.cols);
-        const tile_height = @divTrunc(work_area.height, self.rows);
-        const x = self.selected_start_col * tile_width + work_area.x;
-        const y = self.selected_start_row * tile_height + work_area.y;
-        return Rect{ .x = x, .y = y, .width = tile_width * self.selected_col_count, .height = tile_height * self.selected_row_count };
+        const preview_tile_width = @divTrunc(work_area.width, self.cols);
+        const preview_tile_height = @divTrunc(work_area.height, self.rows);
+        const x = self.selected_start_col * preview_tile_width + work_area.x;
+        const y = self.selected_start_row * preview_tile_height + work_area.y;
+        return Rect{ .x = x, .y = y, .width = preview_tile_width * self.selected_col_count, .height = preview_tile_height * self.selected_row_count };
     }
 
     pub fn calculateActiveWindowArea(self: *const Grid, active_window: win32.HWND) Rect {
