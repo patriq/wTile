@@ -16,7 +16,7 @@ pub const PreviewWindow = struct {
     window: ?win32.HWND = null,
 
     const CLASS_NAME = win32.L("Grid Preview");
-    const BACKGROUND_COLOR = common.RGB(0, 77, 128);
+    const BACKGROUND_COLOR = common.RGB(83, 83, 83);
 
     fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(WINAPI) win32.LRESULT {
         return win32.DefWindowProcW(window, message, wParam, lParam);

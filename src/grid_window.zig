@@ -23,9 +23,9 @@ pub const GridWindow = struct {
     active_window: ?win32.HWND = null,
 
     const CLASS_NAME = win32.L("Grid");
-    const BACKGROUND_COLOR = common.RGB(44, 44, 44);
-    const SELECTED_COLOR = common.RGB(0, 77, 128);
-    const UNSELECTED_COLOR = common.RGB(255, 255, 255);
+    const BACKGROUND_COLOR = common.RGB(32, 33, 36);
+    const SELECTED_COLOR = common.RGB(186, 188, 190);
+    const UNSELECTED_COLOR = common.RGB(95, 99, 104);
     const WINDOW_STYLE = win32.WS_OVERLAPPEDWINDOW;
     const WINDOW_EX_STYLE = win32.WINDOW_EX_STYLE{ .TOPMOST = 1, .TOOLWINDOW = 1 };
 

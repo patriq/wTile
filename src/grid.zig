@@ -8,14 +8,9 @@ const Rect = @import("rect.zig").Rect;
 
 // Grid
 pub const Grid = struct {
-    // Configuration
-    rows: u16 = 8,
-    cols: u16 = 6,
-    margins: u16 = 3,
-
-    // "Constants"
-    tile_width: i32 = 40,
-    tile_height: i32 = @divTrunc(6 * 40, 8),
+    // Configuration (make these configurable later)
+    rows: u16 = 4,
+    cols: u16 = 4,
 
     // State
     selected_start_row: i32 = 0,
@@ -23,16 +18,21 @@ pub const Grid = struct {
     selected_col_count: i32 = 0,
     selected_row_count: i32 = 0,
 
+    // Make these configurable later
+    const TILE_WIDTH: i32 = 50;
+    const TILE_HEIGHT: i32 = 50;
+    const MARGIN_PIXELS: i32 = 4;
+
     pub fn dimensions(self: *const Grid) struct { i32, i32 } {
-        const width = self.tile_width * self.cols + self.margins * (self.cols + 1);
-        const height = self.tile_height * self.rows + self.margins * (self.rows + 1);
+        const width = Grid.TILE_WIDTH * self.cols + Grid.MARGIN_PIXELS * (self.cols + 1);
+        const height = Grid.TILE_HEIGHT * self.rows + Grid.MARGIN_PIXELS * (self.rows + 1);
         return .{ @intCast(width), @intCast(height) };
     }
 
-    pub fn tileArea(self: *const Grid, row: i32, column: i32) Rect {
-        const x = column * self.tile_width + self.margins * (column + 1);
-        const y = row * self.tile_height + self.margins * (row + 1);
-        return Rect{ .x = x, .y = y, .width = self.tile_width, .height = self.tile_height };
+    pub fn tileArea(_: *const Grid, row: i32, column: i32) Rect {
+        const x = column * Grid.TILE_WIDTH + Grid.MARGIN_PIXELS * (column + 1);
+        const y = row * Grid.TILE_HEIGHT + Grid.MARGIN_PIXELS * (row + 1);
+        return Rect{ .x = x, .y = y, .width = Grid.TILE_WIDTH, .height = Grid.TILE_HEIGHT };
     }
 
     pub fn isSelected(self: *const Grid, row: i32, col: i32) bool {
