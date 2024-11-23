@@ -35,6 +35,12 @@ pub const GridWindow = struct {
         };
 
         switch (message) {
+            win32.WM_KILLFOCUS => {
+                // Close the window when it loses focus
+                const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
+                self.closeWindow();
+                return win32.FALSE;
+            },
             win32.WM_KEYDOWN => {
                 const key: win32.VIRTUAL_KEY = @enumFromInt(wParam);
                 const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
@@ -178,22 +184,56 @@ pub const GridWindow = struct {
         return win32.SetForegroundWindow(self.window) != win32.FALSE;
     }
 
-    pub fn onForegroundChange(self: *GridWindow, previous: ?win32.HWND, current: ?win32.HWND) void {
-        // Set the active window to the previous window if we don't have any. This means we are starting up and the
-        // previous window is the first window we have seen (that is not us).
-        if (self.active_window == null and previous != self.window and previous != self.preview_window.window) {
-            self.active_window = previous;
+    fn isBlockedWindow(self: *const GridWindow, hwnd: ?win32.HWND) bool {
+        // Dont resize null windows
+        if (hwnd == null) {
+            return true;
         }
-        // After initializing the active window, we can change it to the current window (that is not us).
-        else if (current != self.window and current != self.preview_window.window) {
-            self.active_window = current;
+        // Dont resize ourselves
+        if (hwnd == self.window or hwnd == self.preview_window.window) {
+            return true;
         }
+        // Dont resize windows with no title
+        if (win32.GetWindowTextLengthW(hwnd) == 0) {
+            return true;
+        }
+        // Dont resize windows with blocked titles
+        const blocked_titles = [_][:0]const u16{
+            win32.L("Search"),
+            win32.L("Start"),
+        };
+        var current_title: [256:0]u16 = undefined;
+        const realLen = win32.GetWindowTextW(hwnd, &current_title, @intCast(current_title.len));
+        const current_title_slice = current_title[0..@intCast(realLen)];
+        for (blocked_titles) |title| {
+            // I KNOWWW that comparing u16 slices is not the best way to compare unicode strings, but it works for now
+            if (std.mem.eql(u16, title, current_title_slice)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-        // If we have an active window, update the title of the grid window to let the user know what window is active.
-        if (self.active_window != null) {
-            var title = common.getWindowsText(self.active_window);
-            _ = win32.SetWindowTextW(self.window, &title);
-        }
+    pub fn onForegroundChange(self: *GridWindow, previous: ?win32.HWND, current: ?win32.HWND) void {
+        // Always update the active window text when the foreground window changes
+        // This ensures that the active window is always up to date (especially after the grid window is closed)
+        defer if (true) {
+            const active_window_text = common.getWindowsText(self.active_window);
+            _ = win32.SetWindowTextW(self.window, &active_window_text);
+        };
+
+        // Go through the current and previous windows to find the most recent window that is not blocked from being
+        // resized
+        const found_candidate: win32.HWND = for ([_]?win32.HWND{current, previous}) |candidate| {
+            // Skip if the window is the grid or preview window, or if it's not allowed
+            if (self.isBlockedWindow(candidate)) {
+                continue;
+            }
+            break candidate.?;
+        } else return;
+
+        // Set the active window to the found candidate
+        self.active_window = found_candidate;
     }
 
     fn applyActiveWindowResize(self: *GridWindow) void {

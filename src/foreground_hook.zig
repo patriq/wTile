@@ -28,9 +28,6 @@ pub fn ForegroundHook(comptime T: type) type {
             _ = dwmsEventTime;
 
             const current_hwnd = hwnd;
-            if (current_hwnd == previous_hwnd) {
-                return;
-            }
             // Call the function with the value as the first argument and the new window as the second
             if (any_function) |func| {
                 if (any_value) |value| {
