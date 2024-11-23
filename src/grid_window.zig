@@ -218,6 +218,7 @@ pub const GridWindow = struct {
         const blocked_titles = [_][:0]const u16{
             win32.L("Search"),
             win32.L("Start"),
+            win32.L("Task Switching"),
         };
         var current_title: [256:0]u16 = undefined;
         const realLen = win32.GetWindowTextW(hwnd, &current_title, @intCast(current_title.len));
