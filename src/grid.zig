@@ -19,32 +19,31 @@ pub const Grid = struct {
     selected_col_count: i32 = 0,
     selected_row_count: i32 = 0,
 
-    const Self = @This();
     const TILE_WIDTH = 40;
     const TILE_HEIGHT = 34;
 
-    pub fn dimensions(self: *const Self) struct { i32, i32 } {
+    pub fn dimensions(self: *const Grid) struct { i32, i32 } {
         const width = TILE_WIDTH * self.cols + self.margins * (self.cols + 1);
         const height = TILE_HEIGHT * self.rows + self.margins * (self.rows + 1);
         return .{ @intCast(width), @intCast(height) };
     }
 
-    pub fn tileArea(self: *const Self, row: i32, column: i32) Rect {
+    pub fn tileArea(self: *const Grid, row: i32, column: i32) Rect {
         const x = column * Grid.TILE_WIDTH + self.margins * (column + 1);
         const y = row * Grid.TILE_HEIGHT + self.margins * (row + 1);
         return Rect{ .x = x, .y = y, .width = Grid.TILE_WIDTH, .height = Grid.TILE_HEIGHT };
     }
 
-    pub fn isSelected(self: *const Self, row: i32, col: i32) bool {
+    pub fn isSelected(self: *const Grid, row: i32, col: i32) bool {
         return row >= self.selected_start_row and row < self.selected_start_row + self.selected_row_count and
             col >= self.selected_start_col and col < self.selected_start_col + self.selected_col_count;
     }
 
-    pub fn isAnySelected(self: *const Self) bool {
+    pub fn isAnySelected(self: *const Grid) bool {
         return self.selected_col_count > 0 and self.selected_row_count > 0;
     }
 
-    pub fn setSelectedUsingActiveWindow(self: *Self, active_window: win32.HWND) void {
+    pub fn setSelectedUsingActiveWindow(self: *Grid, active_window: win32.HWND) void {
         const active_window_rect = common.getWindowsPos(active_window);
         const work_area = common.getWorkArea();
         const tile_width = @divTrunc(work_area.width, self.cols);
@@ -84,21 +83,21 @@ pub const Grid = struct {
         }
     }
 
-    pub fn setSelected(self: *Self, row: i32, col: i32) void {
+    pub fn setSelected(self: *Grid, row: i32, col: i32) void {
         self.selected_start_row = row;
         self.selected_start_col = col;
         self.selected_col_count = 1;
         self.selected_row_count = 1;
     }
 
-    pub fn resetSelection(self: *Self) void {
+    pub fn resetSelection(self: *Grid) void {
         self.selected_start_row = 0;
         self.selected_start_col = 0;
         self.selected_col_count = 0;
         self.selected_row_count = 0;
     }
 
-    pub fn currentPreviewArea(self: *const Self) Rect {
+    pub fn currentPreviewArea(self: *const Grid) Rect {
         const work_area = common.getWorkArea();
         const tile_width = @divTrunc(work_area.width, self.cols);
         const tile_height = @divTrunc(work_area.height, self.rows);
@@ -107,7 +106,7 @@ pub const Grid = struct {
         return Rect{ .x = x, .y = y, .width = tile_width * self.selected_col_count, .height = tile_height * self.selected_row_count };
     }
 
-    pub fn calculateActiveWindowArea(self: *const Self, active_window: win32.HWND) Rect {
+    pub fn calculateActiveWindowArea(self: *const Grid, active_window: win32.HWND) Rect {
         // Get the preview window position for use to set the active window position to
         var preview_area = self.currentPreviewArea();
         // Windows has some weird borders that need to be accounted for
@@ -118,7 +117,7 @@ pub const Grid = struct {
         return preview_area;
     }
 
-    pub fn handleKeys(self: *Self, key: win32.VIRTUAL_KEY, shift: bool) void {
+    pub fn handleKeys(self: *Grid, key: win32.VIRTUAL_KEY, shift: bool) void {
         if (!self.isAnySelected()) {
             self.setSelected(0, 0);
             return;

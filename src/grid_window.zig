@@ -68,8 +68,7 @@ pub const GridWindow = struct {
                         repaint = true;
 
                         // Change preview window position
-                        const preview_area = self.grid.currentPreviewArea();
-                        self.preview_window.setPos(preview_area, self.window);
+                        self.updatePreviewWindowPosition();
                         return win32.FALSE;
                     },
                     win32.VK_RETURN => {
@@ -102,9 +101,41 @@ pub const GridWindow = struct {
                 // Close the preview window
                 self.preview_window.closeWindow();
             },
+            win32.WM_DESTROY => {
+                const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
+                self.window = null;
+                return win32.FALSE;
+            },
             else => {},
         }
         return win32.DefWindowProcW(window, message, wParam, lParam);
+    }
+
+    fn calculate_window_pos(self: *const GridWindow) Rect {
+        const work_area = common.getWorkArea();
+
+        // Find the client dimensions
+        const client_dimensions = self.grid.dimensions();
+
+        // Find the window rectangle based on the client dimensions
+        var window_rect = win32.RECT{
+            .left = 0,
+            .top = 0,
+            .right = client_dimensions[0],
+            .bottom = client_dimensions[1],
+        };
+        _ = win32.AdjustWindowRectEx(&window_rect, WINDOW_STYLE, win32.FALSE, WINDOW_EX_STYLE);
+        const window_dimensions = Rect.fromRECT(window_rect);
+
+        // Find where to place the window (center of the current monitor)
+        const x = @divTrunc(work_area.width, 2) - @divTrunc(window_dimensions.width, 2) + work_area.x + window_dimensions.x;
+        const y = @divTrunc(work_area.height, 2) - @divTrunc(window_dimensions.height, 2) + work_area.y + window_dimensions.y;
+        return Rect{ .x = x, .y = y, .width = window_dimensions.width, .height = window_dimensions.height };
+    }
+
+    pub fn updatePreviewWindowPosition(self: *const GridWindow) void {
+        const preview_area = self.grid.currentPreviewArea();
+        self.preview_window.setPos(preview_area, self.window);
     }
 
     pub fn createWindow(self: *GridWindow, hInstance: win32.HINSTANCE) void {
@@ -129,23 +160,8 @@ pub const GridWindow = struct {
             self.window_class_registration = atom;
         }
 
-        // Find the client dimensions
-        const client_dimensions = self.grid.dimensions();
-
-        // Find the window rectangle based on the client dimensions
-        var window_rect = win32.RECT{
-            .left = 0,
-            .top = 0,
-            .right = client_dimensions[0],
-            .bottom = client_dimensions[1],
-        };
-        _ = win32.AdjustWindowRectEx(&window_rect, WINDOW_STYLE, win32.FALSE, WINDOW_EX_STYLE);
-        const window_dimensions = Rect.fromRECT(window_rect);
-
-        // Find where to place the window (center of the current monitor)
-        const work_area = common.getWorkArea();
-        const x = @divTrunc(work_area.width, 2) - @divTrunc(window_dimensions.width, 2) + work_area.x + window_dimensions.x;
-        const y = @divTrunc(work_area.height, 2) - @divTrunc(window_dimensions.height, 2) + work_area.y + window_dimensions.y;
+        // Calculate the window position
+        const window_dimensions = self.calculate_window_pos();
 
         // Create the window
         const window = win32.CreateWindowExW(
@@ -153,8 +169,8 @@ pub const GridWindow = struct {
             CLASS_NAME, // Class name
             null, // Window name
             WINDOW_STYLE,
-            x,
-            y,
+            window_dimensions.x,
+            window_dimensions.y,
             window_dimensions.width,
             window_dimensions.height,
             null, // Parent
@@ -169,15 +185,14 @@ pub const GridWindow = struct {
         self.window = window;
     }
 
-    pub fn showWindow(self: *const GridWindow) void {
-        _ = win32.ShowWindow(self.window, win32.SW_SHOW);
+    pub fn reposition(self: *const GridWindow) void {
+        const window_dimensions = self.calculate_window_pos();
+        common.setWindowPos(self.window, window_dimensions, null);
+        self.updatePreviewWindowPosition();
     }
 
-    fn forceSetForeground(self: *const GridWindow) bool {
-        if (self.window) |window| {
-            return common.forceSetForeground(window);
-        }
-        return false;
+    pub fn showWindow(self: *const GridWindow) void {
+        _ = win32.ShowWindow(self.window, win32.SW_SHOW);
     }
 
     pub fn setForeground(self: *const GridWindow) bool {

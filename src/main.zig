@@ -21,6 +21,12 @@ const foreground_hook = @import("foreground_hook.zig");
 pub const UNICODE = true;
 
 fn handle_hotkey(hInstance: win32.HINSTANCE, grid_window: *GridWindow, preview_window: *PreviewWindow) void {
+    if (grid_window.window != null) {
+        // If the grid window is already visible, repostion it
+        grid_window.reposition();
+        return;
+    }
+
     // Set the preview window and grid window
     preview_window.createWindow(hInstance);
     grid_window.createWindow(hInstance);

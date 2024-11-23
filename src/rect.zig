@@ -8,8 +8,6 @@ pub const Rect = struct {
     width: i32,
     height: i32,
 
-    const Self = @This();
-
     pub fn fromRECT(rect: win32.RECT) Rect {
         return Rect{
             .x = rect.left,
@@ -19,7 +17,7 @@ pub const Rect = struct {
         };
     }
 
-    pub fn toRECT(self: *const Self) win32.RECT {
+    pub fn toRECT(self: *const Rect) win32.RECT {
         return win32.RECT{
             .left = self.x,
             .top = self.y,
@@ -28,10 +26,10 @@ pub const Rect = struct {
         };
     }
 
-    pub fn overlaps(rect1: Rect, rect2: Rect) bool {
-        return rect1.x < rect2.x + rect2.width and
-            rect1.x + rect1.width > rect2.x and
-            rect1.y < rect2.y + rect2.height and
-            rect1.y + rect1.height > rect2.y;
+    pub fn overlaps(self: *const Rect, other: Rect) bool {
+        return self.x < other.x + other.width and
+            self.x + self.width > other.x and
+            self.y < other.y + other.height and
+            self.y + self.height > other.y;
     }
 };
