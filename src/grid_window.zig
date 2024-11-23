@@ -24,6 +24,8 @@ pub const GridWindow = struct {
 
     const CLASS_NAME = win32.L("Grid");
     const BACKGROUND_COLOR = common.RGB(44, 44, 44);
+    const SELECTED_COLOR = common.RGB(0, 77, 128);
+    const UNSELECTED_COLOR = common.RGB(255, 255, 255);
     const WINDOW_STYLE = win32.WS_OVERLAPPEDWINDOW;
     const WINDOW_EX_STYLE = win32.WINDOW_EX_STYLE{ .TOPMOST = 1, .TOOLWINDOW = 1 };
 
@@ -298,7 +300,7 @@ pub const GridWindow = struct {
         while (row < self.grid.rows) : (row += 1) {
             var col: i32 = 0;
             while (col < self.grid.cols) : (col += 1) {
-                const color = if (grid.isSelected(row, col)) common.RGB(0, 77, 128) else common.RGB(255, 255, 255);
+                const color = if (grid.isSelected(row, col)) SELECTED_COLOR else UNSELECTED_COLOR;
                 const brush = win32.CreateSolidBrush(color);
                 defer _ = win32.DeleteObject(brush);
 
