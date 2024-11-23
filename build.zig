@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
-    exe.subsystem = .Console;
+    exe.subsystem = .Windows;
 
     // Icon
     exe.root_module.addAnonymousImport("res/icon.png", .{ .root_source_file = b.path("res/icon.png") });
