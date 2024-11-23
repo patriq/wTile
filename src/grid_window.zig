@@ -265,25 +265,16 @@ pub const GridWindow = struct {
         }
     }
 
-    fn destroyWindow(self: *GridWindow) void {
+    pub fn cleanup(self: *GridWindow) void {
         if (self.window) |window| {
             _ = win32.DestroyWindow(window);
             self.window = null;
         }
-    }
-
-    fn deregisterWindowClass(self: *GridWindow) void {
-        std.debug.print("Cleaning up grid window", .{});
         // Unregister the window class
         if (self.window_class_registration != null) {
             _ = win32.UnregisterClassW(CLASS_NAME, null);
             self.window_class_registration = null;
         }
-    }
-
-    pub fn cleanup(self: *GridWindow) void {
-        self.destroyWindow();
-        self.deregisterWindowClass();
     }
 
     fn closeWindow(self: *GridWindow) void {

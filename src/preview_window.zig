@@ -75,23 +75,16 @@ pub const PreviewWindow = struct {
         common.closeWindow(self.window);
     }
 
-    fn destroyWindow(self: *PreviewWindow) void {
+    pub fn cleanup(self: *PreviewWindow) void {
+        // Destroy the window
         if (self.window) |window| {
             _ = win32.DestroyWindow(window);
             self.window = null;
         }
-    }
-
-    fn deregisterWindowClass(self: *PreviewWindow) void {
         // Unregister the window class
         if (self.window_class_registration != null) {
             _ = win32.UnregisterClassW(CLASS_NAME, null);
             self.window_class_registration = null;
         }
-    }
-
-    pub fn cleanup(self: *PreviewWindow) void {
-        self.destroyWindow();
-        self.deregisterWindowClass();
     }
 };
