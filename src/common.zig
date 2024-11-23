@@ -102,3 +102,9 @@ pub fn closeWindow(hwnd: ?win32.HWND) void {
 pub fn setWindowPos(hwnd: ?win32.HWND, rect: Rect, insert_after: ?win32.HWND) void {
     _ = win32.SetWindowPos(hwnd, insert_after, rect.x, rect.y, rect.width, rect.height, win32.SWP_NOACTIVATE);
 }
+
+pub fn getWindowsPos(hwnd: ?win32.HWND) Rect {
+    var rect: win32.RECT = undefined;
+    _ = win32.GetWindowRect(hwnd, &rect);
+    return Rect.fromRECT(rect);
+}

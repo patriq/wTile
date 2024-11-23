@@ -35,14 +35,6 @@ pub const GridWindow = struct {
         };
 
         switch (message) {
-            win32.WM_SETFOCUS => {
-                std.debug.print("Got focus {}\n", .{wParam});
-                return win32.FALSE;
-            },
-            win32.WM_KILLFOCUS => {
-                std.debug.print("Lost focus {}\n", .{wParam});
-                return win32.FALSE;
-            },
             win32.WM_KEYDOWN => {
                 const key: win32.VIRTUAL_KEY = @enumFromInt(wParam);
                 const self: *GridWindow = @ptrFromInt(win32.getWindowLongPtrW(window, 0));
@@ -56,6 +48,13 @@ pub const GridWindow = struct {
                         return win32.FALSE;
                     },
                     win32.VK_UP, win32.VK_DOWN, win32.VK_LEFT, win32.VK_RIGHT => {
+                        // Try to set the current selection to the active window dimensions (nearest)
+                        if (!self.grid.isAnySelected()) {
+                            if (self.active_window) |active_window| {
+                                self.grid.setSelectedUsingActiveWindow(active_window);
+                            }
+                        }
+
                         // Handle arrow keys
                         self.grid.handleKeys(key, self.shift_pressed);
 

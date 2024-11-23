@@ -10,10 +10,6 @@ pub const Rect = struct {
 
     const Self = @This();
 
-    pub fn zero() Rect {
-        return Rect{ .x = 0, .y = 0, .width = 0, .height = 0 };
-    }
-
     pub fn fromRECT(rect: win32.RECT) Rect {
         return Rect{
             .x = rect.left,
@@ -30,5 +26,12 @@ pub const Rect = struct {
             .right = self.x + self.width,
             .bottom = self.y + self.height
         };
+    }
+
+    pub fn overlaps(rect1: Rect, rect2: Rect) bool {
+        return rect1.x < rect2.x + rect2.width and
+            rect1.x + rect1.width > rect2.x and
+            rect1.y < rect2.y + rect2.height and
+            rect1.y + rect1.height > rect2.y;
     }
 };
