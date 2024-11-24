@@ -44,6 +44,11 @@ pub const Grid = struct {
         return self.selected_col_count > 0 and self.selected_row_count > 0;
     }
 
+    pub fn isAllSelected(self: *const Grid) bool {
+        return self.selected_col_count == self.cols and self.selected_row_count == self.rows
+            and self.selected_start_row == 0 and self.selected_start_col == 0;
+    }
+
     pub fn setSelectedUsingActiveWindow(self: *Grid, active_window: win32.HWND) void {
         const active_window_rect = common.getWindowsPos(active_window);
         const work_area = common.getWorkArea();

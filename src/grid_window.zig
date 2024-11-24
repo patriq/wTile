@@ -258,6 +258,13 @@ pub const GridWindow = struct {
         if (self.active_window) |active_window| {
             // Restore the window to fix resizing with maximized windows
             _ = win32.ShowWindow(active_window, win32.SW_RESTORE);
+
+            // If all tiles are selected, maximize the window
+            if (self.grid.isAllSelected()) {
+                _ = win32.ShowWindow(active_window, win32.SW_MAXIMIZE);
+                return;
+            }
+
             // Get the active window area
             const active_window_area = self.grid.calculateActiveWindowArea(active_window);
             // Set the active window position without activating it (no loss of focus)
