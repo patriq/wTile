@@ -1,5 +1,5 @@
 .{
-    .name = .zwTile,
+    .name = .wTile,
     .version = "0.1.0",
     .fingerprint = 0xa7706afd12f8caab,
     .paths = .{
