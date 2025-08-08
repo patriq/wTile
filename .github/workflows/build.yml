@@ -24,7 +24,7 @@ jobs:
         run: zig build --release=fast -Doptimize=ReleaseFast
 
       - name: Upload EXE artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: compiled-exe
           path: zig-out/bin/*.exe
