@@ -1,0 +1,30 @@
+name: Build EXE
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.0-dev.2367+aa7d13846 # Replace with the Zig version you need
+
+      - name: Build EXE
+        run: zig build --release=fast -Doptimize=ReleaseFast
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: compiled-exe
+          path: zig-out/bin/*.exe
