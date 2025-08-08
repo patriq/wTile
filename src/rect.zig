@@ -1,6 +1,4 @@
-const win32 = struct {
-    usingnamespace @import("win32").foundation;
-};
+const win32 = @import("win32").everything;
 
 pub const Rect = struct {
     x: i32,

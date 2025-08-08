@@ -1,7 +1,4 @@
-const win32 = struct {
-    usingnamespace @import("win32").foundation;
-    usingnamespace @import("win32").ui.input.keyboard_and_mouse;
-};
+const win32 = @import("win32").everything;
 
 const common = @import("common.zig");
 const Rect = @import("rect.zig").Rect;

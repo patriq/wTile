@@ -1,8 +1,5 @@
 const std = @import("std");
-const win32 = struct {
-    usingnamespace @import("win32").foundation;
-    usingnamespace @import("win32").ui.windows_and_messaging;
-};
+const win32 = @import("win32").everything;
 
 pub fn ForegroundHook(comptime T: type) type {
     return struct {

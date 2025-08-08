@@ -1,12 +1,5 @@
 const std = @import("std");
-const win32 = struct {
-    usingnamespace @import("win32").zig;
-    usingnamespace @import("win32").foundation;
-    usingnamespace @import("win32").graphics.gdi;
-    usingnamespace @import("win32").ui.windows_and_messaging;
-    usingnamespace @import("win32").ui.input.keyboard_and_mouse;
-};
-const WINAPI = @import("std").os.windows.WINAPI;
+const win32 = @import("win32").everything;
 
 const common = @import("common.zig");
 
@@ -30,7 +23,7 @@ const NOTIFYICONDATAW = extern struct {
     guidItem: std.os.windows.GUID,
     hBalloonIcon: std.os.windows.HICON,
 };
-extern "shell32" fn Shell_NotifyIconW(dwMessage: std.os.windows.DWORD, lpData: [*c]NOTIFYICONDATAW) callconv(WINAPI) std.os.windows.BOOL;
+extern "shell32" fn Shell_NotifyIconW(dwMessage: std.os.windows.DWORD, lpData: [*c]NOTIFYICONDATAW) callconv(.winapi) std.os.windows.BOOL;
 
 const NIF_ICON = 0x00000002;
 const NIF_MESSAGE = 0x00000001;
@@ -55,7 +48,7 @@ pub const Tray = struct {
     // Menu item IDs
     const ID_EXIT = 1;
 
-    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(WINAPI) win32.LRESULT {
+    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(.winapi) win32.LRESULT {
         switch (message) {
             win32.WM_CLOSE => {
                 const self: *Tray = @ptrFromInt(win32.getWindowLongPtrW(window, 0));

@@ -1,12 +1,5 @@
 const std = @import("std");
-const win32 = struct {
-    usingnamespace @import("win32").zig;
-    usingnamespace @import("win32").foundation;
-    usingnamespace @import("win32").graphics.gdi;
-    usingnamespace @import("win32").ui.windows_and_messaging;
-    usingnamespace @import("win32").ui.input.keyboard_and_mouse;
-};
-const WINAPI = @import("std").os.windows.WINAPI;
+const win32 = @import("win32").everything;
 
 const common = @import("common.zig");
 const Rect = @import("rect.zig").Rect;
@@ -18,7 +11,7 @@ pub const PreviewWindow = struct {
     const CLASS_NAME = win32.L("Grid Preview");
     const BACKGROUND_COLOR = common.RGB(83, 83, 83);
 
-    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(WINAPI) win32.LRESULT {
+    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(.winapi) win32.LRESULT {
         return win32.DefWindowProcW(window, message, wParam, lParam);
     }
 

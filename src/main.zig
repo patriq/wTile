@@ -1,14 +1,5 @@
 const std = @import("std");
-const WINAPI = @import("std").os.windows.WINAPI;
-const win32 = struct {
-    usingnamespace @import("win32").zig;
-    usingnamespace @import("win32").foundation;
-    usingnamespace @import("win32").system.system_services;
-    usingnamespace @import("win32").system.threading;
-    usingnamespace @import("win32").ui.windows_and_messaging;
-    usingnamespace @import("win32").ui.input.keyboard_and_mouse;
-    usingnamespace @import("win32").graphics.gdi;
-};
+const win32 = @import("win32").everything;
 
 const common = @import("common.zig");
 const Rect = @import("rect.zig").Rect;
@@ -39,7 +30,7 @@ fn handle_hotkey(hInstance: win32.HINSTANCE, grid_window: *GridWindow, preview_w
     }
 }
 
-pub export fn main(hInstance: win32.HINSTANCE, hPrevInstance: ?win32.HINSTANCE, pCmdLine: [*:0]u16, nCmdShow: u32) callconv(WINAPI) c_int {
+pub export fn main(hInstance: win32.HINSTANCE, hPrevInstance: ?win32.HINSTANCE, pCmdLine: [*:0]u16, nCmdShow: u32) callconv(.winapi) c_int {
     // Unused parameters
     _ = hPrevInstance;
     _ = pCmdLine;

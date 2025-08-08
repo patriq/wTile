@@ -18,7 +18,7 @@ jobs:
       - name: Set up Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.0-dev.2367+aa7d13846 # Replace with the Zig version you need
+          version: 0.14.1
 
       - name: Build EXE
         run: zig build --release=fast -Doptimize=ReleaseFast

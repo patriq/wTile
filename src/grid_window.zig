@@ -1,12 +1,5 @@
 const std = @import("std");
-const win32 = struct {
-    usingnamespace @import("win32").zig;
-    usingnamespace @import("win32").foundation;
-    usingnamespace @import("win32").graphics.gdi;
-    usingnamespace @import("win32").ui.windows_and_messaging;
-    usingnamespace @import("win32").ui.input.keyboard_and_mouse;
-};
-const WINAPI = @import("std").os.windows.WINAPI;
+const win32 = @import("win32").everything;
 
 const common = @import("common.zig");
 const Rect = @import("rect.zig").Rect;
@@ -29,7 +22,7 @@ pub const GridWindow = struct {
     const WINDOW_STYLE = win32.WS_OVERLAPPEDWINDOW;
     const WINDOW_EX_STYLE = win32.WINDOW_EX_STYLE{ .TOPMOST = 1, .TOOLWINDOW = 1 };
 
-    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(WINAPI) win32.LRESULT {
+    fn wndProc(window: win32.HWND, message: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(.winapi) win32.LRESULT {
         var repaint = false;
         // Repaint at the end if needed
         defer if (repaint) {
@@ -150,7 +143,7 @@ pub const GridWindow = struct {
                 .cbWndExtra = @sizeOf(*GridWindow), // Reserve the size to store a Self pointer in the window
                 .hInstance = hInstance,
                 .hIcon = null,
-                .hCursor = null,
+                .hCursor = win32.LoadCursorW(null, win32.IDC_ARROW),
                 .hbrBackground = win32.CreateSolidBrush(BACKGROUND_COLOR),
                 .lpszMenuName = null,
                 .lpszClassName = CLASS_NAME,
